@@ -101,7 +101,7 @@ class Slurm():
         return result.returncode
 
     def sbatch(self, run_cmd: str, convert: bool = True, verbose: bool = True,
-               sbatch_cmd: str = 'sbatch', shell: str = '/bin/sh') -> int:
+               sbatch_cmd: str = 'sbatch', shell: str = '/bin/sh', script_file=None) -> int:
         '''Run the sbatch command with all the (previously) set arguments and
         the provided command to in 'run_cmd'.
 
@@ -119,13 +119,23 @@ class Slurm():
         the '$' should be scaped into '\$'. This behavior is default, set
         'convert' to False to disable it.
         '''
-        cmd = '\n'.join((
-            sbatch_cmd + ' << EOF',
-            self.arguments(shell),
-            run_cmd.replace('$', '\\$') if convert else run_cmd,
-            'EOF',
-        ))
-        result = subprocess.run(cmd, shell=True, stdout=subprocess.PIPE)
+        if script_file is None:
+            cmd = [sbatch_cmd, '\n'.join((
+                ' << EOF',
+                self.arguments(shell),
+                run_cmd.replace('$', '\\$') if convert else run_cmd,
+                'EOF',
+            ))]
+        else:
+            script = '\n'.join((
+                self.arguments(shell),
+                run_cmd
+            ))
+            with open(script_file, 'w') as f:
+                f.write(script)
+            cmd = [sbatch_cmd, script_file]
+        result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            
         success_msg = 'Submitted batch job'
         stdout = result.stdout.decode('utf-8')
         assert success_msg in stdout, result.stderr
