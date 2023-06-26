@@ -141,7 +141,8 @@ class Slurm():
         assert success_msg in stdout, result.stderr
         if verbose:
             print(stdout)
-        job_id = int(stdout.split(' ')[3])
+        stdout_last_line = stdout.splitlines()[-1]
+        job_id = int(stdout_last_line.split(' ')[3])
         return job_id
 
 
